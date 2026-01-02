@@ -3,7 +3,7 @@ import logging
 import traceback
 from time import monotonic
 
-from bleak_retry_connector import establish_connection, BleakClientWithServiceCache
+from bleak import BleakClient
 
 from homeassistant.components import bluetooth
 
