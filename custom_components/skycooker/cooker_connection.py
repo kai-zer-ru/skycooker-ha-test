@@ -119,12 +119,8 @@ class CookerConnection(SkyCookerProtocol):
             self._device = bluetooth.async_ble_device_from_address(self.hass, self._mac)
             _LOGGER.debug(f"Connect: Found BLE device: {self._device}")
             
-            self._client = await establish_connection(
-                BleakClientWithServiceCache,
-                self._device,
-                self._device.name or "Unknown Device",
-                max_attempts=3
-            )
+            self._client = BleakClient(self._device)
+            await self._client.connect()
             
             _LOGGER.info(f"Connect: Successfully connected to {self._mac}")
             await self._client.start_notify(self.UUID_RX, self._rx_callback)
