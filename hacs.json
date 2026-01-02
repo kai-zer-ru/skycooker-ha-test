@@ -1,0 +1,9 @@
+{
+  "name": "SkyCooker",
+  "content_in_root": false,
+  "filename": "manifest.json",
+  "homeassistant": "2025.12.5",
+  "render_readme": true,
+  "iot_class": "Cloud Polling",
+  "persistent_directory": "custom_components/skycooker"
+}

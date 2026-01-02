@@ -1,0 +1,13 @@
+{
+  "domain": "skycooker",
+  "name": "SkyCooker",
+  "codeowners": ["@kai-zer-ru"],
+  "config_flow": true,
+  "dependencies": ["bluetooth_adapters", "bleak_retry_connector"],
+  "documentation": "https://github.com/kai-zer-ru/skycooker-ha-test/blob/main/README.md",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/kai-zer-ru/skycooker-ha-test/issues",
+  "requirements": [],
+  "version": "1.0.0",
+  "supported_diagnostics": true
+}

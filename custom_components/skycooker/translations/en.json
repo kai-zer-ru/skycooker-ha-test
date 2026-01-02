@@ -1,0 +1,53 @@
+{
+    "title": "SkyCooker",
+    "config": {
+        "abort": {
+            "no_bluetooth": "It seems that the 'Bluetooth' integration is not installed or not working. This integration depends on it.",
+            "cooker_not_found": "Cannot find the cooker. Please make sure that your cooker model is in the supported list and it is powered on.",
+            "already_configured": "Integration for this cooker is already configured.",
+            "unknown_model": "Your cooker model is not yet supported by this integration. But you can help add support for it! Contact the author through the 'issues' section on GitHub.",
+            "unknown": "Unknown error, see logs."
+        },
+        "error": {
+            "cant_connect": "Cannot connect to the cooker. Please make sure it is powered on and in pairing mode.",
+            "cant_auth": "Connected to the cooker, but pairing failed. Please try again."
+        },
+        "step": {
+            "scan_message": {
+                "title": "Automatic cooker discovery",
+                "description": "Please make sure that the cooker is powered on and in pairing mode."
+            },
+            "scan": {
+                "title": "MAC address",
+                "description": "Select your cooker.",
+                "data": {
+                    "mac": "MAC address of the cooker"
+                }
+            },
+            "connect": {
+                "title": "First connection",
+                "description": "Please make sure that the cooker is in pairing mode (see the cooker instruction, usually you need to hold some button for 10 seconds)."
+            },            
+            "init": {
+                "title": "Settings",
+                "description": "You can change some settings if you wish.",
+                "data": {
+                    "persistent_connection": "Persistent connection (faster, but exclusive, as you won't be able to use the official app simultaneously)",
+                    "scan_interval": "Polling interval in seconds (small values are recommended only with persistent connection)"
+                }
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Settings",
+                "description": "You can change some settings if you wish.",
+                "data": {
+                    "persistent_connection": "Persistent connection (faster, but exclusive, as you won't be able to use the official app simultaneously)",
+                    "scan_interval": "Polling interval in seconds (small values are recommended only with persistent connection)"
+                }
+            }
+        }
+    }
+}

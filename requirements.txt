@@ -1,0 +1,6 @@
+# Зависимости для SkyCooker интеграции
+# Эти зависимости автоматически устанавливаются HomeAssistant
+#
+# bleak>=0.20.0
+# bleak-retry-connector>=2.0.0
+# homeassistant>=2025.12.5
