@@ -2,6 +2,7 @@ import logging
 from collections import namedtuple
 from struct import pack, unpack
 from abc import abstractmethod
+from const import VERSION_TIMEOUT
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -68,7 +69,7 @@ class SkyCookerProtocol:
         """Получение версии прошивки"""
         _LOGGER.debug("📋 Get version: Requesting firmware version")
         # Используем увеличенный таймаут для получения версии
-        original_timeout = self.BLE_RECV_TIMEOUT
+        original_timeout = getattr(self, 'BLE_RECV_TIMEOUT', 1.5)
         self.BLE_RECV_TIMEOUT = VERSION_TIMEOUT
         try:
             r = await self.command(0x01)

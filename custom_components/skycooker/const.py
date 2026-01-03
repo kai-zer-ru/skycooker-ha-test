@@ -6,7 +6,7 @@ MANUFACTORER = "Redmond"
 SUGGESTED_AREA = "kitchen"
 
 # Debug version for development
-DEBUG_VERSION = "0.0.5"
+DEBUG_VERSION = "0.0.6"
 
 # Таймауты
 BLE_RECV_TIMEOUT = 1.5
