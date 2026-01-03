@@ -74,6 +74,8 @@ class SkyCookerProtocol:
         if model in ["RMC-M40S", "RMC-M41S", "RMC-M42S", "RMC-M43S", "RMC-M44S",
                      "RMC-M45S", "RMC-M46S", "RMC-M47S", "RMC-M48S", "RMC-M49S"]:
             return "M40S"
+        elif model in ["RK-M216S", "RK-M215S", "RK-M223S", "RK-G200S", "RK-G211S"]:
+            return "M216S"  # Используем протокол от чайников
         return None
     
     @abstractmethod
