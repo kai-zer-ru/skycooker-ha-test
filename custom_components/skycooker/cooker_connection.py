@@ -184,7 +184,18 @@ class CookerConnection(SkyCookerProtocol):
                 _LOGGER.error(f"Auth failed. You need to enable pairing mode on the cooker.")
                 raise AuthError("Auth failed")
             _LOGGER.debug("Auth ok")
-            self._sw_version = await self.get_version()
+            # Получаем версию прошивки (временно закомментировано для RK-M216S)
+            # self._sw_version = await self.get_version()
+            
+            # Получаем состояние устройства
+            _LOGGER.info("📊 Get status: Requesting current cooker status")
+            try:
+                self._status = await self.get_status()
+                _LOGGER.info(f"📊 Get status: Current status: {self._status}")
+            except Exception as e:
+                _LOGGER.error(f"❌ Get status: Failed to get status with error: {e}")
+                raise
+            
             # Синхронизация времени не требуется для мультиварки
 
     async def _disconnect_if_need(self):
