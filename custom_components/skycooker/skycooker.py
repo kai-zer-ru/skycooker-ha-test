@@ -169,51 +169,62 @@ class SkyCookerProtocol:
         """Получение текущего состояния"""
         _LOGGER.debug("📊 Get status: Requesting current cooker status")
         try:
-            r = await self.command(0x06)
+            # Для RK-M216S и других моделей может использоваться другая команда
+            if self.model_code == "M216S":
+                # Попробуем команду 0x06 (стандартная)
+                r = await self.command(0x06)
+            else:
+                # Для RMC-M40S используем стандартную команду
+                r = await self.command(0x06)
+            
             _LOGGER.debug(f"📊 Get status: Raw response: {[hex(b) for b in r]}")
             
-            # Разбор ответа
-            status = r[11]  # Состояние
-            mode = r[3] + 1  # Режим
-            submode = r[4]  # Подрежим
-            temperature = r[5]  # Температура
-            target_temp = r[5]  # Целевая температура
-            hours = r[6]  # Часы
-            minutes = r[7]  # Минуты
-            wait_hours = r[8] - r[6]  # Ожидание часов
-            wait_minutes = r[9] - r[7]  # Ожидание минут
-            heat = r[10]  # Подогрев
-            
-            _LOGGER.debug(f"📊 Get status: Parsed values - status={status}, mode={mode}, submode={submode}, "
-                         f"temp={temperature}, hours={hours}, minutes={minutes}, "
-                         f"wait_hours={wait_hours}, wait_minutes={wait_minutes}, heat={heat}")
-            
-            cooker_state = CookerState(
-                status=status,
-                mode=mode,
-                submode=submode,
-                temperature=temperature,
-                target_temperature=target_temp,
-                hours=hours,
-                minutes=minutes,
-                wait_hours=wait_hours,
-                wait_minutes=wait_minutes,
-                heat=heat,
-                version=None,  # Будет установлено позже
-                language=1,    # Русский по умолчанию
-                autostart=False,
-                power=status > 0,
-                postheat=heat == 1,
-                timer_mode=False,
-                automode=False
-            )
-            
-            status_name = STATUS_NAMES.get(status, f"Unknown({status})")
-            mode_name = MODE_NAMES.get(mode, f"Unknown({mode})")
-            _LOGGER.info(f"✅ Get status: Current state - {status_name}, mode: {mode_name}, "
-                        f"temp: {temperature}°C, time: {hours}:{minutes:02d}")
-            
-            return cooker_state
+            # Разбор ответа (пока используем стандартный формат)
+            if len(r) >= 12:
+                status = r[0]  # Состояние
+                mode = r[1]    # Режим
+                submode = r[2] # Подрежим
+                temperature = r[4]  # Температура
+                target_temp = r[5]  # Целевая температура
+                hours = r[6]   # Часы
+                minutes = r[7] # Минуты
+                wait_hours = r[8] if len(r) > 8 else 0  # Ожидание часов
+                wait_minutes = r[9] if len(r) > 9 else 0  # Ожидание минут
+                heat = r[10] if len(r) > 10 else 0  # Подогрев
+                
+                _LOGGER.debug(f"📊 Get status: Parsed values - status={status}, mode={mode}, submode={submode}, "
+                             f"temp={temperature}, hours={hours}, minutes={minutes}, "
+                             f"wait_hours={wait_hours}, wait_minutes={wait_minutes}, heat={heat}")
+                
+                cooker_state = CookerState(
+                    status=status,
+                    mode=mode,
+                    submode=submode,
+                    temperature=temperature,
+                    target_temperature=target_temp,
+                    hours=hours,
+                    minutes=minutes,
+                    wait_hours=wait_hours,
+                    wait_minutes=wait_minutes,
+                    heat=heat,
+                    version=None,  # Будет установлено позже
+                    language=1,    # Русский по умолчанию
+                    autostart=False,
+                    power=status > 0,
+                    postheat=heat == 1,
+                    timer_mode=False,
+                    automode=False
+                )
+                
+                status_name = STATUS_NAMES.get(status, f"Unknown({status})")
+                mode_name = MODE_NAMES.get(mode, f"Unknown({mode})")
+                _LOGGER.info(f"✅ Get status: Current state - {status_name}, mode: {mode_name}, "
+                            f"temp: {temperature}°C, time: {hours}:{minutes:02d}")
+                
+                return cooker_state
+            else:
+                _LOGGER.warning("📊 Get status: Invalid response length")
+                return None
         except Exception as e:
             _LOGGER.error(f"❌ Get status: Failed to get status with error: {e}")
             raise
