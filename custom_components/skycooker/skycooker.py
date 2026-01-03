@@ -107,7 +107,9 @@ class SkyCookerProtocol:
             return (major, minor)
         except Exception as e:
             _LOGGER.error(f"❌ Get version: Failed to get version with error: {e}")
-            raise
+            # Для некоторых моделей команда получения версии может не работать
+            # Возвращаем заглушку, чтобы не прерывать работу интеграции
+            return (0, 0)
         finally:
             self.BLE_RECV_TIMEOUT = original_timeout
     
