@@ -2,7 +2,7 @@ import logging
 from collections import namedtuple
 from struct import pack, unpack
 from abc import abstractmethod
-from const import VERSION_TIMEOUT
+from .const import VERSION_TIMEOUT
 
 _LOGGER = logging.getLogger(__name__)
 
