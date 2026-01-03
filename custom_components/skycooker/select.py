@@ -44,12 +44,12 @@ class SkyCookerSelectBase(SelectEntity):
     @property
     def unique_id(self):
         """Return the unique ID."""
-        return self.entry.entry_id + f"_{self.entity_description.key}"
+        return self.entry.entry_id + f"_{self._attr_unique_id.split('_')[-1]}"
 
     @property
     def name(self):
         """Return the name."""
-        return f"{FRIENDLY_NAME} {self.entry.data.get(CONF_FRIENDLY_NAME, '')} {self.entity_description.name}".strip()
+        return self._attr_name
 
     @property
     def device_info(self):
