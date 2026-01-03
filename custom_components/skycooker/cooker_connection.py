@@ -3,8 +3,9 @@ import logging
 import traceback
 from time import monotonic
 
+from bleak_retry_connector import establish_connection, BleakClientWithServiceCache
+
 from homeassistant.components import bluetooth
-from homeassistant.components.bluetooth import async_ble_device_from_address
 
 from .const import *
 from .skycooker import SkyCookerProtocol
@@ -118,8 +119,12 @@ class CookerConnection(SkyCookerProtocol):
             self._device = bluetooth.async_ble_device_from_address(self.hass, self._mac)
             _LOGGER.debug(f"Connect: Found BLE device: {self._device}")
             
-            self._client = bluetooth.BleakClient(self._device)
-            await self._client.connect()
+            self._client = await establish_connection(
+                BleakClientWithServiceCache,
+                self._device,
+                self._device.name or "Unknown Device",
+                max_attempts=3
+            )
             
             _LOGGER.info(f"Connect: Successfully connected to {self._mac}")
             await self._client.start_notify(self.UUID_RX, self._rx_callback)
