@@ -1,5 +1,6 @@
 """Support for SkyCooker."""
 import logging
+import voluptuous as vol
 from datetime import timedelta
 
 import homeassistant.helpers.event as ev
@@ -65,6 +66,42 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         """Schedule next polling"""
         _LOGGER.debug(f"Schedule: Next poll in {td.total_seconds()} seconds")
         hass.data[DOMAIN][DATA_CANCEL] = ev.async_call_later(hass, td, poll)
+
+    # Регистрация сервиса для тестирования соединения
+    async def test_connection_service(call):
+        """Сервис для тестирования соединения"""
+        _LOGGER.info("🔧 Test connection service called")
+        try:
+            results = await cooker.test_connection()
+            _LOGGER.info(f"🔧 Test connection completed with {len(results)} results")
+            
+            # Логирование результатов в HA log
+            for result in results:
+                status_icon = "✅" if result["status"] == "OK" else "❌" if result["status"] == "FAIL" else "ℹ️"
+                _LOGGER.info(f"  {status_icon} {result['test']}: {result['status']} - {result['details']}")
+            
+            # Можно добавить уведомление в HA
+            hass.bus.fire(f"{DOMAIN}_test_results", {
+                "entry_id": entry.entry_id,
+                "results": results
+            })
+            
+        except Exception as e:
+            _LOGGER.error(f"🔧 Test connection service failed: {e}")
+            hass.bus.fire(f"{DOMAIN}_test_error", {
+                "entry_id": entry.entry_id,
+                "error": str(e)
+            })
+
+    # Регистрация сервиса
+    hass.services.async_register(
+        DOMAIN,
+        "test_connection",
+        test_connection_service,
+        schema={
+            vol.Optional("entry_id"): str,
+        }
+    )
 
     hass.data[DOMAIN][DATA_WORKING] = True
     hass.data[DOMAIN][DATA_DEVICE_INFO] = lambda: device_info(entry)

@@ -6,7 +6,7 @@ MANUFACTORER = "Redmond"
 SUGGESTED_AREA = "kitchen"
 
 # Debug version for development
-DEBUG_VERSION = "0.0.10"
+DEBUG_VERSION = "0.0.11"
 
 # Таймауты
 BLE_RECV_TIMEOUT = 1.5
@@ -35,6 +35,21 @@ COMMAND_SET_COOKING_TIME = 0x0C
 COMMAND_SET_DELAY_TIME = 0x14
 COMMAND_SET_POST_HEAT = 0x16
 COMMAND_AUTH = 0xFF
+
+# Таймауты команд (в секундах)
+COMMAND_TIMEOUTS = {
+    COMMAND_AUTH: 3.0,              # Аутентификация может быть медленной
+    COMMAND_GET_VERSION: 5.0,       # Получение версии
+    COMMAND_GET_STATUS: 2.0,        # Получение статуса
+    COMMAND_SET_MAIN_MODE: 3.0,     # Установка режима
+    COMMAND_TURN_ON: 2.0,           # Включение
+    COMMAND_TURN_OFF: 2.0,          # Выключение
+    COMMAND_SET_TEMPERATURE: 2.0,   # Установка температуры
+    COMMAND_SET_COOKING_TIME: 2.0,  # Установка времени готовки
+    COMMAND_SET_DELAY_TIME: 2.0,    # Установка отложенного старта
+    COMMAND_SET_POST_HEAT: 2.0,     # Установка подогрева
+    "default": 1.5                  # Стандартный таймаут
+}
 
 # Состояния мультиварки
 STATUS_HIBERNATION = 0x00

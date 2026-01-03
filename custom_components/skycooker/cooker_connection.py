@@ -45,8 +45,111 @@ class CookerConnection(SkyCookerProtocol):
         self._disposed = False
         self._last_data = None
 
-    async def command(self, command, params=[]):
-        """Отправка команды устройству"""
+    async def test_connection(self, test_commands=None):
+        """Тестирование соединения и команд для разработки"""
+        _LOGGER.info("🧪 Starting connection test")
+        
+        if test_commands is None:
+            test_commands = [
+                {"cmd": COMMAND_GET_STATUS, "name": "Get Status"},
+                {"cmd": COMMAND_GET_VERSION, "name": "Get Version", "timeout": 5.0},
+                {"cmd": COMMAND_TURN_OFF, "name": "Turn Off", "params": []},
+            ]
+        
+        results = []
+        
+        try:
+            # Проверка подключения
+            _LOGGER.info("🔌 Testing connection...")
+            await self._connect_if_need()
+            results.append({"test": "Connection", "status": "OK", "details": "Connected successfully"})
+            
+            # Проверка аутентификации
+            _LOGGER.info("🔑 Testing authentication...")
+            if not self._auth_ok:
+                auth_result = await self.auth()
+                if auth_result:
+                    results.append({"test": "Authentication", "status": "OK", "details": "Auth successful"})
+                else:
+                    results.append({"test": "Authentication", "status": "FAIL", "details": "Auth failed"})
+                    return results
+            else:
+                results.append({"test": "Authentication", "status": "OK", "details": "Already authenticated"})
+            
+            # Тестирование команд
+            for test_cmd in test_commands:
+                cmd = test_cmd["cmd"]
+                name = test_cmd["name"]
+                params = test_cmd.get("params", [])
+                timeout = test_cmd.get("timeout", None)
+                
+                _LOGGER.info(f"📤 Testing command: {name} (0x{cmd:02X})")
+                
+                try:
+                    response = await self.command(cmd, params, timeout=timeout, retries=1)
+                    results.append({
+                        "test": f"Command {name}",
+                        "status": "OK",
+                        "details": f"Response: {response.hex() if response else 'No response'}"
+                    })
+                    _LOGGER.info(f"✅ Command {name} successful")
+                except Exception as e:
+                    results.append({
+                        "test": f"Command {name}",
+                        "status": "FAIL",
+                        "details": f"Error: {type(e).__name__}: {str(e)}"
+                    })
+                    _LOGGER.error(f"❌ Command {name} failed: {e}")
+            
+            # Тестирование установки температуры
+            _LOGGER.info("🌡️ Testing temperature setting...")
+            try:
+                await self.set_target_temp(60, "Тушение")
+                results.append({"test": "Set Temperature", "status": "OK", "details": "Temperature set to 60°C"})
+                _LOGGER.info("✅ Temperature setting successful")
+            except Exception as e:
+                results.append({"test": "Set Temperature", "status": "FAIL", "details": f"Error: {type(e).__name__}: {str(e)}"})
+                _LOGGER.error(f"❌ Temperature setting failed: {e}")
+            
+            # Тестирование режимов
+            _LOGGER.info("⚙️ Testing mode switching...")
+            try:
+                await self.set_target_mode("Выпечка")
+                results.append({"test": "Set Mode", "status": "OK", "details": "Mode set to Выпечка"})
+                _LOGGER.info("✅ Mode switching successful")
+            except Exception as e:
+                results.append({"test": "Set Mode", "status": "FAIL", "details": f"Error: {type(e).__name__}: {str(e)}"})
+                _LOGGER.error(f"❌ Mode switching failed: {e}")
+            
+            # Получение статистики
+            results.append({
+                "test": "Connection Stats",
+                "status": "INFO",
+                "details": f"Success rate: {self.success_rate}%, Connected: {self.connected}, Auth: {self.auth_ok}"
+            })
+            
+        except Exception as e:
+            results.append({
+                "test": "Overall Test",
+                "status": "FAIL",
+                "details": f"Critical error: {type(e).__name__}: {str(e)}"
+            })
+            _LOGGER.error(f"❌ Critical error during test: {e}")
+        finally:
+            # Отключение если не persistent
+            if not self.persistent:
+                await self.disconnect()
+        
+        # Логирование результатов
+        _LOGGER.info("🧪 Connection test completed:")
+        for result in results:
+            status_icon = "✅" if result["status"] == "OK" else "❌" if result["status"] == "FAIL" else "ℹ️"
+            _LOGGER.info(f"  {status_icon} {result['test']}: {result['status']} - {result['details']}")
+        
+        return results
+
+    async def command(self, command, params=[], timeout=None, retries=2):
+        """Отправка команды устройству с улучшенной обработкой"""
         _LOGGER.debug(f"📤 Command: Sending command 0x{command:02X} with params: {[hex(p) for p in params]}")
         
         if self._disposed:
@@ -56,49 +159,92 @@ class CookerConnection(SkyCookerProtocol):
             _LOGGER.error("❌ Command: Not connected to device")
             raise IOError("not connected")
         
+        # Определение таймаута для команды
+        if timeout is None:
+            timeout = COMMAND_TIMEOUTS.get(command, COMMAND_TIMEOUTS["default"])
+        
         self._iter = (self._iter + 1) % 256
-        _LOGGER.debug(f"📤 Command: Iteration {self._iter}, writing command 0x{command:02x}")
+        _LOGGER.debug(f"📤 Command: Iteration {self._iter}, writing command 0x{command:02x}, timeout: {timeout}s")
         
         data = bytes([0x55, self._iter, command] + list(params) + [0xAA])
         _LOGGER.debug(f"📤 Command: Full packet: {' '.join([f'{b:02x}' for b in data])}")
         
-        self._last_data = None
-        try:
-            await self._client.write_gatt_char(self.UUID_TX, data)
-            _LOGGER.debug(f"✅ Command: Successfully wrote {len(data)} bytes to device")
-        except Exception as e:
-            _LOGGER.error(f"❌ Command: Failed to write to device: {e}")
-            raise
+        attempt = 0
+        while attempt <= retries:
+            attempt += 1
+            self._last_data = None
+            
+            try:
+                # Отправка команды
+                await self._client.write_gatt_char(self.UUID_TX, data)
+                _LOGGER.debug(f"✅ Command: Successfully wrote {len(data)} bytes to device (attempt {attempt})")
+                
+                # Ожидание ответа с адаптивным polling
+                response = await self._wait_for_response(timeout)
+                
+                # Проверка ответа
+                if response[2] != command:
+                    _LOGGER.error(f"❌ Command: Invalid response command, expected 0x{command:02X}, got 0x{response[2]:02X}")
+                    if attempt <= retries:
+                        _LOGGER.debug(f"📤 Command: Retrying command (attempt {attempt}/{retries})")
+                        await asyncio.sleep(0.2 * attempt)  # Экспоненциальная задержка
+                        continue
+                    raise IOError("Invalid response command")
+                
+                clean = bytes(response[3:-1])
+                _LOGGER.debug(f"📥 Command: Clean response data: {' '.join([f'{c:02x}' for c in clean])}")
+                return clean
+                
+            except TimeoutError as e:
+                _LOGGER.error(f"❌ Command: Timeout after {timeout}s (attempt {attempt}/{retries})")
+                if attempt <= retries:
+                    _LOGGER.debug(f"📤 Command: Retrying command after timeout (attempt {attempt}/{retries})")
+                    await asyncio.sleep(0.5 * attempt)
+                    continue
+                raise
+            except Exception as e:
+                _LOGGER.error(f"❌ Command: Error during command execution: {e}")
+                if attempt <= retries:
+                    _LOGGER.debug(f"📤 Command: Retrying command after error (attempt {attempt}/{retries})")
+                    await asyncio.sleep(0.3 * attempt)
+                    continue
+                raise
         
-        timeout_time = monotonic() + self.BLE_RECV_TIMEOUT
-        _LOGGER.debug(f"📥 Command: Waiting for response with timeout {self.BLE_RECV_TIMEOUT}s")
+        raise IOError(f"Command failed after {retries + 1} attempts")
+
+    async def _wait_for_response(self, timeout):
+        """Ожидание ответа с адаптивным polling"""
+        timeout_time = monotonic() + timeout
+        poll_interval = 0.05  # Начальный интервал polling
         
         while True:
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(poll_interval)
+            
             if self._last_data:
                 r = self._last_data
                 _LOGGER.debug(f"📥 Command: Received raw data: {' '.join([f'{b:02x}' for b in r])}")
                 
+                # Проверка magic bytes
                 if r[0] != 0x55 or r[-1] != 0xAA:
                     _LOGGER.error(f"❌ Command: Invalid response magic, expected 0x55/0xAA, got 0x{r[0]:02X}/0x{r[-1]:02X}")
                     raise IOError("Invalid response magic")
+                
+                # Проверка iteration
                 if r[1] == self._iter:
                     _LOGGER.debug(f"✅ Command: Response iteration matches {self._iter}")
-                    break
+                    return r
                 else:
                     _LOGGER.debug(f"⚠️ Command: Iteration mismatch, expected {self._iter}, got {r[1]}, waiting for next packet")
                     self._last_data = None
+            
+            # Адаптивный polling - увеличиваем интервал со временем
+            current_elapsed = monotonic() - (timeout_time - timeout)
+            if current_elapsed > timeout * 0.5:  # После половины таймаута увеличиваем интервал
+                poll_interval = min(0.2, poll_interval * 1.5)
+            
             if monotonic() >= timeout_time:
-                _LOGGER.error(f"❌ Command: Receive timeout after {self.BLE_RECV_TIMEOUT}s")
-                raise IOError("Receive timeout")
-        
-        if r[2] != command:
-            _LOGGER.error(f"❌ Command: Invalid response command, expected 0x{command:02X}, got 0x{r[2]:02X}")
-            raise IOError("Invalid response command")
-        
-        clean = bytes(r[3:-1])
-        _LOGGER.debug(f"📥 Command: Clean response data: {' '.join([f'{c:02x}' for c in clean])}")
-        return clean
+                _LOGGER.error(f"❌ Command: Receive timeout after {timeout}s")
+                raise TimeoutError("Receive timeout")
 
     def _rx_callback(self, sender, data):
         """Обработка входящих данных"""
@@ -163,40 +309,49 @@ class CookerConnection(SkyCookerProtocol):
             pass
 
     async def _connect_if_need(self):
-        """Подключение при необходимости"""
+        """Подключение при необходимости с улучшенной обработкой"""
+        # Проверка состояния соединения
         if self._client and not self._client.is_connected:
-            _LOGGER.debug("Connection lost")
+            _LOGGER.warning("⚠️ Connection lost, attempting to reconnect")
             await self.disconnect()
         
         if not self._client or not self._client.is_connected:
             try:
+                _LOGGER.info("🔌 Attempting to connect to cooker")
                 await self._connect()
                 self._last_connect_ok = True
+                _LOGGER.info("✅ Successfully connected to cooker")
             except Exception as ex:
+                _LOGGER.error(f"❌ Failed to connect to cooker: {ex}")
                 await self.disconnect()
                 self._last_connect_ok = False
                 raise ex
         
+        # Проверка аутентификации
         if not self._auth_ok:
-            auth_result = await self.auth()
-            self._last_auth_ok = self._auth_ok = auth_result
-            if not self._auth_ok:
-                _LOGGER.error(f"Auth failed. You need to enable pairing mode on the cooker.")
-                raise AuthError("Auth failed")
-            _LOGGER.debug("Auth ok")
-            # Получаем версию прошивки (временно закомментировано для RK-M216S)
-            # self._sw_version = await self.get_version()
-            
-            # Получаем состояние устройства
-            _LOGGER.info("📊 Get status: Requesting current cooker status")
             try:
-                self._status = await self.get_status()
-                _LOGGER.info(f"📊 Get status: Current status: {self._status}")
-            except Exception as e:
-                _LOGGER.error(f"❌ Get status: Failed to get status with error: {e}")
+                _LOGGER.info("🔑 Attempting authentication")
+                auth_result = await self.auth()
+                self._last_auth_ok = self._auth_ok = auth_result
+                if not self._auth_ok:
+                    _LOGGER.error("❌ Authentication failed. Please enable pairing mode on the cooker.")
+                    raise AuthError("Authentication failed - pairing mode required")
+                _LOGGER.info("✅ Authentication successful")
+            except AuthError:
                 raise
-            
-            # Синхронизация времени не требуется для мультиварки
+            except Exception as e:
+                _LOGGER.error(f"❌ Authentication error: {e}")
+                raise AuthError(f"Authentication failed: {e}")
+        
+        # Получение состояния устройства (если еще не получено)
+        if self._status is None:
+            try:
+                _LOGGER.info("📊 Requesting current cooker status")
+                self._status = await self.get_status()
+                _LOGGER.info(f"✅ Status retrieved: {self._status}")
+            except Exception as e:
+                _LOGGER.error(f"❌ Failed to get status: {e}")
+                raise
 
     async def _disconnect_if_need(self):
         """Отключение при необходимости"""
