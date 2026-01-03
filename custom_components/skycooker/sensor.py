@@ -77,7 +77,7 @@ class SkyCookerStatusSensor(SkyCookerSensorBase):
     """Status sensor for SkyCooker."""
 
     _attr_device_class = SensorDeviceClass.ENUM
-    _attr_options = list(MODE_NAMES.values()) + ["Выключено"]
+    _attr_options = list(STATUS_NAMES.values()) + ["Нет данных"]
     
     def __init__(self, hass, entry):
         """Initialize the status sensor."""
