@@ -6,7 +6,11 @@ MANUFACTORER = "Redmond"
 SUGGESTED_AREA = "kitchen"
 
 # Debug version for development
-DEBUG_VERSION = "0.0.4"
+DEBUG_VERSION = "0.0.5"
+
+# Таймауты
+BLE_RECV_TIMEOUT = 1.5
+VERSION_TIMEOUT = 5.0
 
 CONF_PERSISTENT_CONNECTION = "persistent_connection"
 

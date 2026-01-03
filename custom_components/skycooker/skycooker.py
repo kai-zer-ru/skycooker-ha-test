@@ -67,6 +67,9 @@ class SkyCookerProtocol:
     async def get_version(self):
         """Получение версии прошивки"""
         _LOGGER.debug("📋 Get version: Requesting firmware version")
+        # Используем увеличенный таймаут для получения версии
+        original_timeout = self.BLE_RECV_TIMEOUT
+        self.BLE_RECV_TIMEOUT = VERSION_TIMEOUT
         try:
             r = await self.command(0x01)
             major, minor = unpack("BB", r)
@@ -76,6 +79,8 @@ class SkyCookerProtocol:
         except Exception as e:
             _LOGGER.error(f"❌ Get version: Failed to get version with error: {e}")
             raise
+        finally:
+            self.BLE_RECV_TIMEOUT = original_timeout
     
     async def turn_on(self):
         """Включение мультиварки"""
