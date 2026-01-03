@@ -6,7 +6,7 @@ MANUFACTORER = "Redmond"
 SUGGESTED_AREA = "kitchen"
 
 # Debug version for development
-DEBUG_VERSION = "0.0.2"
+DEBUG_VERSION = "0.0.3"
 
 CONF_PERSISTENT_CONNECTION = "persistent_connection"
 
